@@ -1,22 +1,16 @@
-import nltk 
 from nltk.corpus import stopwords
 from keras import models, layers
-import heapq
-# import glove
 from keras.preprocessing.text import Tokenizer
-import keras.preprocessing.text as kpt
+import keras.preprocessing.sequence as kps
+import pandas as pd
+import numpy as np
 import argparse
 import zipfile
 import sklearn.metrics
-import pandas as pd
-import numpy as np
 import json
 import re
 import emoji
-import string
 import keras
-# import sys
-# np.set_printoptions(threshold=sys.maxsize)
 
 
 emotions = ["anger", "anticipation", "disgust", "fear", "joy", "love",
@@ -32,13 +26,6 @@ def train_and_predict(train_word_data, train_labels,
     # dev_predictions[emotions] = 1
 
     model, kwargs = create_model(vocab_len)
-    # print(len(train_word_data))
-    # print(len(test_word_data))
-    print(train_labels)
-    print(len(test_labels))
-
-    train_labels = keras.utils.to_categorical(train_labels, 10)
-    test_labels = keras.utils.to_categorical(test_labels, 10)
 
     kwargs.update(x=train_word_data, y=train_labels,
                   epochs=10, validation_data=(test_word_data, test_labels))
@@ -50,11 +37,11 @@ def train_and_predict(train_word_data, train_labels,
 def create_model(vocab_len):
     model = models.Sequential()
     model.add(layers.Embedding(vocab_len, 200, mask_zero=True))
-    model.add(layers.Bidirectional(layers.GRU(64, return_sequences=True)))
+    model.add(layers.Bidirectional(layers.GRU(64)))
     model.add(layers.Dense(50, activation='relu'))
-    model.add(layers.Dense(10, activation ='sigmoid'))
+    model.add(layers.Dense(11, activation ='sigmoid'))
 
-    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
     return [model, {}]
 
@@ -64,36 +51,14 @@ def preprocess_data(train, test):
 
     tokenizer = Tokenizer(num_words=len_vocab)
     tokenizer.fit_on_texts(clean_train)
-    dictionary = tokenizer.word_index
-    with open('graduate-project-dalcantara7/dictionary.json', 'w+') as dictionary_file:
-        json.dump(dictionary, dictionary_file)
-
-    tokenizer.fit_on_texts(clean_test)
-    dictionary = tokenizer.word_index
-    with open('graduate-project-dalcantara7/dictionary.json', 'a') as dictionary_file:
-        json.dump(dictionary, dictionary_file)
     
-    train_tweet_indices = []
-    for tweet in clean_train:
-        word_indices = convert_tweet_to_index_array(dictionary, tweet)
-        train_tweet_indices.append(word_indices)
+    train_tweet_indices = tokenizer.texts_to_sequences(clean_train)
+    train_tweet_indices = kps.pad_sequences(train_tweet_indices, padding='post')
 
-    train_tweet_indices = np.asarray(train_tweet_indices)
+    test_tweet_indices = tokenizer.texts_to_sequences(clean_test)
+    test_tweet_indices = kps.pad_sequences(test_tweet_indices, padding='post')
 
-    test_tweet_indices = []
-    for tweet in clean_test:
-        word_indices = convert_tweet_to_index_array(dictionary, tweet)
-        test_tweet_indices.append(word_indices)
-
-    test_tweet_indices = np.asarray(test_tweet_indices)
-
-    train_tweet_matrix = tokenizer.sequences_to_matrix(train_tweet_indices, mode='binary')
-    test_tweet_matrix = tokenizer.sequences_to_matrix(test_tweet_indices, mode='binary')
-
-    return train_tweet_matrix, test_tweet_matrix, len_vocab
-
-def convert_tweet_to_index_array(dictionary, tweet):
-    return [dictionary[word] for word in kpt.text_to_word_sequence(tweet)]
+    return train_tweet_indices, test_tweet_indices, len_vocab
 
 def clean_tweets(train_set, test_set):
     clean_train = []
@@ -104,9 +69,9 @@ def clean_tweets(train_set, test_set):
         lowered = demojized.lower()
         sans_special_chars = re.sub(r'\W',' ', lowered)
         sans_extra_spaces = re.sub(r'\s+',' ', sans_special_chars)
+        #remove underscores string.replace('_', ' ')
         split = sans_extra_spaces.split()
         without_stop_words = ' '.join([word for word in split if word not in set(stopwords.words('english'))])
-        # vocabulary += [word for word in clean_train]
         clean_train.append(without_stop_words)
 
     for tweet in test_set:
@@ -116,14 +81,10 @@ def clean_tweets(train_set, test_set):
         sans_extra_spaces = re.sub(r'\s+',' ', sans_special_chars)
         split = sans_extra_spaces.split()
         without_stop_words = ' '.join([word for word in split if word not in set(stopwords.words('english'))])
-        # vocabulary += [word for word in clean_train]
         clean_test.append(without_stop_words)
 
     len_vocab = 0
     for tweet in clean_train:
-        len_vocab += len(tweet)
-
-    for tweet in clean_test:
         len_vocab += len(tweet)
 
     return clean_train, clean_test, len_vocab
@@ -144,11 +105,11 @@ if __name__ == "__main__":
 
     train_word_indices, test_word_indices, vocab_len = preprocess_data(train_data, test_data)
 
-    train_labels = train_data.iloc[:,2:11].values
-    test_labels = test_data.iloc[:,2:11].values
+    train_labels = train_data.iloc[:,2:13]
+    test_labels = test_data.iloc[:,2:13]
 
     # makes predictions on the dev set
-    test_predictions = train_and_predict(train_word_indices, test_word_indices, train_labels, test_labels, vocab_len)
+    test_predictions = train_and_predict(train_word_indices, train_labels, test_word_indices, test_labels, vocab_len)
 
     # saves predictions and creates submission zip file
     test_predictions.to_csv("E-C_en_pred.txt", sep="\t", index=False)
