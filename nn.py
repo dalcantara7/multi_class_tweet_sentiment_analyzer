@@ -11,7 +11,7 @@ import json
 import re
 import emoji
 import keras
-
+from keras import backend as K
 
 emotions = ["anger", "anticipation", "disgust", "fear", "joy", "love",
             "optimism", "pessimism", "sadness", "surprise", "trust"]
@@ -21,46 +21,40 @@ emotion_to_int = {"0": 0, "1": 1, "NONE": -1}
 def train_and_predict(train_word_data, train_labels,
                       test_word_data, test_labels, vocab_len, full_test_data):
 
-    # doesn't train anything; just predicts 1 for all of dev set
-    # dev_predictions = dev_data.copy()
-    # dev_predictions[emotions] = 1
-
     model, kwargs = create_model(vocab_len)
 
     kwargs.update(x=train_word_data, y=train_labels,
-                  epochs=13, validation_data=(test_word_data, test_labels))
+                  epochs=3, validation_data=(test_word_data, test_labels))
 
     model.fit(**kwargs)
 
     dev_predictions = full_test_data.copy()
 
     predictions = model.predict(test_word_data)
-    # mat = np.matrix(predictions)
-    # with open('graduate-project-dalcantara7/predictions_continuous.txt', 'w+') as f:
-    #     for line in mat:
-    #         np.savetxt(f, line, fmt='%.2f')
 
     predictions = np.round(predictions)
-    # mat = np.matrix(predictions)
-    # with open('graduate-project-dalcantara7/predictions.txt', 'w+') as f:
-    #     for line in mat:
-    #         np.savetxt(f, line, fmt='%1.0f')
 
     dev_predictions[emotions] = predictions
-    # print(dev_predictions)
 
     return dev_predictions
 
 def create_model(vocab_len):
     model = models.Sequential()
-    model.add(layers.Embedding(vocab_len, 200, mask_zero=True))
-    model.add(layers.Bidirectional(layers.GRU(64)))
-    model.add(layers.Dense(50, activation='relu'))
+    model.add(layers.Embedding(vocab_len, 300, mask_zero=True))
+    model.add(layers.Bidirectional(layers.GRU(128)))
+    model.add(layers.Dense(100, activation='relu'))
     model.add(layers.Dense(11, activation ='sigmoid'))
 
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
     return [model, {}]
+
+def jss(y_true, y_pred):
+    smooth=100
+    intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
+    sum_ = K.sum(K.abs(y_true) + K.abs(y_pred), axis=-1)
+    jac = (intersection + smooth) / (sum_ - intersection + smooth)
+    return (1 - jac) * smooth
 
 def preprocess_data(train, test):
     clean_train = []
@@ -135,7 +129,6 @@ if __name__ == "__main__":
                            converters={e: emotion_to_int.get for e in emotions})
     train_data = pd.read_csv(args.train, **read_csv_kwargs)
     test_data = pd.read_csv(args.test, **read_csv_kwargs)
-    # print(train_data.iloc[:,2:11][0])
 
     # clean_tweets(train_data['Tweet'], test_data['Tweet'])
 
