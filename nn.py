@@ -19,14 +19,16 @@ emotions = ["anger", "anticipation", "disgust", "fear", "joy", "love",
             "optimism", "pessimism", "sadness", "surprise", "trust"]
 emotion_to_int = {"0": 0, "1": 1, "NONE": -1}
 
+NUM_WORDS = 120000
+
 
 def train_and_predict(train_word_data, train_labels,
-                      test_word_data, test_labels, vocab_len, full_test_data):
+                      test_word_data, test_labels, vocab_len, full_test_data, embedding_layer):
 
-    model, kwargs = create_model(vocab_len)
+    model, kwargs = create_model(vocab_len, embedding_layer)
 
     kwargs.update(x=train_word_data, y=train_labels,
-                  epochs=4, validation_data=(test_word_data, test_labels))
+                  epochs=5, validation_data=(test_word_data, test_labels))
 
     model.fit(**kwargs)
 
@@ -35,25 +37,28 @@ def train_and_predict(train_word_data, train_labels,
     predictions = model.predict(test_word_data)
 
     predictions = np.round(predictions)
+    predictions = predictions.astype(int)
 
     dev_predictions[emotions] = predictions
 
     return dev_predictions
 
-def create_model(vocab_len):
+def create_model(vocab_len, embedding_layer):
     model = models.Sequential()
-    model.add(layers.Embedding(vocab_len, 100, mask_zero=True))
-    model.add(layers.Bidirectional(layers.GRU(250)))
+    model.add(embedding_layer)
+    model.add(layers.Bidirectional(layers.GRU(400)))
     # model.add(layers.Bidirectional(layers.LSTM(50)))
-    model.add(layers.Dense(100, activation='relu'))
+    model.add(layers.Dense(225, activation='relu'))
+    model.add(layers.Dropout(0.3))
     model.add(layers.Dense(11, activation ='sigmoid'))
 
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-    return [model, {'batch_size' : 64}]
+    return [model, {'batch_size' : 64, 'callbacks' : [callbacks.EarlyStopping(monitor='val_accuracy', patience=10, restore_best_weights=True)]}]
     # return [model, {}]
 
 def preprocess_data(train, test):
+    EMBEDDING_DIM = 200
     clean_train = []
     clean_test = []
 
@@ -65,16 +70,39 @@ def preprocess_data(train, test):
         for tweet in f:
             clean_test.append(tweet.rstrip())
 
-    tokenizer = Tokenizer(num_words=90000)
+    tokenizer = Tokenizer(num_words=NUM_WORDS)
     tokenizer.fit_on_texts(clean_train)
     
     train_tweet_indices = tokenizer.texts_to_sequences(clean_train)
+    word_index = tokenizer.word_index
     train_tweet_indices = kps.pad_sequences(train_tweet_indices, padding='post')
 
     test_tweet_indices = tokenizer.texts_to_sequences(clean_test)
-    test_tweet_indices = kps.pad_sequences(test_tweet_indices, padding='post')
+    test_tweet_indices = kps.pad_sequences(test_tweet_indices, padding='post', maxlen=len(train_tweet_indices[0]))
 
-    return train_tweet_indices, test_tweet_indices
+    embeddings_index = {}
+    f = open("graduate-project-dalcantara7/glove.twitter.27B/glove.twitter.27B.200d.txt")
+    for line in f:
+        values = line.split()
+        word = values[0]
+        coefs = np.asarray(values[1:], dtype='float32')
+        embeddings_index[word] = coefs
+    f.close()
+    embedding_matrix = np.zeros((len(word_index) + 1, EMBEDDING_DIM))
+    for word, i in word_index.items():
+        embedding_vector = embeddings_index.get(word)
+        if embedding_vector is not None:
+            # words not found in embedding index will be all-zeros.
+            embedding_matrix[i] = embedding_vector
+
+    embedding_layer = layers.Embedding(len(word_index) + 1,
+                            EMBEDDING_DIM,
+                            weights=[embedding_matrix],
+                            input_length=len(train_tweet_indices[0]),
+                            trainable=True,
+                            mask_zero=True)
+
+    return train_tweet_indices, test_tweet_indices, embedding_layer
 
 def clean_tweets(train_set, test_set):
     clean_train = []
@@ -128,13 +156,13 @@ if __name__ == "__main__":
 
     # clean_tweets(train_data['Tweet'], test_data['Tweet'])
 
-    train_word_indices, test_word_indices = preprocess_data(train_data, test_data)
+    train_word_indices, test_word_indices, embedding_layer = preprocess_data(train_data, test_data)
 
     train_labels = np.asarray(train_data.iloc[:,2:13])
     test_labels = np.asarray(test_data.iloc[:,2:13])
 
     # makes predictions on the dev set
-    test_predictions = train_and_predict(train_word_indices, train_labels, test_word_indices, test_labels, 90000, test_data)
+    test_predictions = train_and_predict(train_word_indices, train_labels, test_word_indices, test_labels, NUM_WORDS, test_data, embedding_layer)
 
     # prints out multi-label accuracy
     print("accuracy: {:.3f}".format(sklearn.metrics.jaccard_similarity_score(
