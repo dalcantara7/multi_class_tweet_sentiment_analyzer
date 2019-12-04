@@ -28,7 +28,7 @@ def train_and_predict(train_word_data, train_labels,
     model, kwargs = create_model(vocab_len, embedding_layer)
 
     kwargs.update(x=train_word_data, y=train_labels,
-                  epochs=5, validation_data=(test_word_data, test_labels))
+                  epochs=4, validation_data=(test_word_data, test_labels))
 
     model.fit(**kwargs)
 
@@ -36,8 +36,8 @@ def train_and_predict(train_word_data, train_labels,
 
     predictions = model.predict(test_word_data)
 
-    predictions = np.round(predictions)
-    predictions = predictions.astype(int)
+    predictions = np.where(predictions > 0.4, 1, 0)
+    # predictions = predictions.astype(int)
 
     dev_predictions[emotions] = predictions
 
@@ -47,7 +47,6 @@ def create_model(vocab_len, embedding_layer):
     model = models.Sequential()
     model.add(embedding_layer)
     model.add(layers.Bidirectional(layers.GRU(400)))
-    # model.add(layers.Bidirectional(layers.LSTM(50)))
     model.add(layers.Dense(225, activation='relu'))
     model.add(layers.Dropout(0.3))
     model.add(layers.Dense(11, activation ='sigmoid'))
