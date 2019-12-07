@@ -28,7 +28,7 @@ def train_and_predict(train_word_data, train_labels,
     model, kwargs = create_model(vocab_len, embedding_layer)
 
     kwargs.update(x=train_word_data, y=train_labels,
-                  epochs=4, validation_data=(test_word_data, test_labels))
+                  epochs=2, validation_data=(test_word_data, test_labels))
 
     model.fit(**kwargs)
 
@@ -46,14 +46,16 @@ def train_and_predict(train_word_data, train_labels,
 def create_model(vocab_len, embedding_layer):
     model = models.Sequential()
     model.add(embedding_layer)
-    model.add(layers.Bidirectional(layers.GRU(400)))
-    model.add(layers.Dense(225, activation='relu'))
+    model.add(layers.Bidirectional(layers.GRU(500)))
+    model.add(layers.Dense(325, activation='relu'))
     model.add(layers.Dropout(0.3))
     model.add(layers.Dense(11, activation ='sigmoid'))
 
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    # opt = keras.optimizers.Adam(learning_rate=0.007)
 
-    return [model, {'batch_size' : 64, 'callbacks' : [callbacks.EarlyStopping(monitor='val_accuracy', patience=10, restore_best_weights=True)]}]
+    model.compile(optimizer='nadam', loss='binary_crossentropy', metrics=['accuracy'])
+
+    return [model, {'batch_size' : 16, 'callbacks' : [callbacks.EarlyStopping(monitor='val_accuracy', patience=10, restore_best_weights=True)]}]
     # return [model, {}]
 
 def preprocess_data(train, test):
