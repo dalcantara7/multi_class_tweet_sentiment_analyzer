@@ -1,7 +1,9 @@
-from nltk.corpus import stopwords
+from nltk.stem.snowball import SnowballStemmer
 from keras import models, layers
 from keras.preprocessing.text import Tokenizer
+from keras import callbacks
 import keras.preprocessing.sequence as kps
+import keras
 import pandas as pd
 import numpy as np
 import argparse
@@ -10,10 +12,6 @@ import sklearn.metrics
 import json
 import re
 import emoji
-import keras
-from keras import backend as K
-from keras import callbacks
-from nltk.stem.snowball import SnowballStemmer
 
 emotions = ["anger", "anticipation", "disgust", "fear", "joy", "love",
             "optimism", "pessimism", "sadness", "surprise", "trust"]
@@ -37,7 +35,6 @@ def train_and_predict(train_word_data, train_labels,
     predictions = model.predict(test_word_data)
 
     predictions = np.where(predictions > 0.4, 1, 0)
-    # predictions = predictions.astype(int)
 
     dev_predictions[emotions] = predictions
 
@@ -51,12 +48,9 @@ def create_model(vocab_len, embedding_layer):
     model.add(layers.Dropout(0.3))
     model.add(layers.Dense(11, activation ='sigmoid'))
 
-    # opt = keras.optimizers.Adam(learning_rate=0.007)
-
     model.compile(optimizer='nadam', loss='binary_crossentropy', metrics=['accuracy'])
 
-    return [model, {'batch_size' : 16, 'callbacks' : [callbacks.EarlyStopping(monitor='val_accuracy', patience=10, restore_best_weights=True)]}]
-    # return [model, {}]
+    return [model, {'batch_size' : 16, 'callbacks' : [callbacks.EarlyStopping(monitor='val_accuracy', patience=10, restore_best_weights=True)]}] # callback only used here to restore best weights if need be
 
 def preprocess_data(train, test):
     EMBEDDING_DIM = 200
@@ -74,6 +68,7 @@ def preprocess_data(train, test):
     tokenizer = Tokenizer(num_words=NUM_WORDS)
     tokenizer.fit_on_texts(clean_train)
     
+    # convert to to token sequences of equal length
     train_tweet_indices = tokenizer.texts_to_sequences(clean_train)
     word_index = tokenizer.word_index
     train_tweet_indices = kps.pad_sequences(train_tweet_indices, padding='post')
@@ -81,6 +76,7 @@ def preprocess_data(train, test):
     test_tweet_indices = tokenizer.texts_to_sequences(clean_test)
     test_tweet_indices = kps.pad_sequences(test_tweet_indices, padding='post', maxlen=len(train_tweet_indices[0]))
 
+    # handling of glove in Keras embedding layer
     embeddings_index = {}
     f = open("graduate-project-dalcantara7/glove.twitter.27B/glove.twitter.27B.200d.txt")
     for line in f:
@@ -110,6 +106,7 @@ def clean_tweets(train_set, test_set):
     clean_test = []
     sno = SnowballStemmer('english')
 
+    # converts emojis to texts, lowers, removes special characters including '_', stems words
     for tweet in train_set:
         demojized = emoji.demojize(tweet)
         lowered = demojized.lower()
@@ -130,10 +127,6 @@ def clean_tweets(train_set, test_set):
         stemmed = ' '.join([sno.stem(word) for word in split])
         clean_test.append(stemmed)
 
-    len_vocab = 0
-    for tweet in clean_train:
-        len_vocab += len(tweet)
-
     with open('graduate-project-dalcantara7/clean_train_tweets.txt', 'w+') as f:
         for tweet in clean_train:
             f.write("%s\n" % tweet)
@@ -146,7 +139,7 @@ if __name__ == "__main__":
     # gets the training and test file names from the command line
     parser = argparse.ArgumentParser()
     parser.add_argument("train", nargs='?', default="graduate-project-dalcantara7/2018-E-c-En-train.txt")
-    parser.add_argument("test", nargs='?', default="graduate-project-dalcantara7/2018-E-c-En-dev.txt")
+    parser.add_argument("test", nargs='?', default="graduate-project-dalcantara7/2018-E-c-En-test.txt")
     args = parser.parse_args()
 
     # reads train and dev data into Pandas data frames
@@ -155,12 +148,12 @@ if __name__ == "__main__":
     train_data = pd.read_csv(args.train, **read_csv_kwargs)
     test_data = pd.read_csv(args.test, **read_csv_kwargs)
 
-    # clean_tweets(train_data['Tweet'], test_data['Tweet'])
+    clean_tweets(train_data['Tweet'], test_data['Tweet'])
 
     train_word_indices, test_word_indices, embedding_layer = preprocess_data(train_data, test_data)
 
-    train_labels = np.asarray(train_data.iloc[:,2:13])
-    test_labels = np.asarray(test_data.iloc[:,2:13])
+    train_labels = np.asarray(train_data.iloc[:,2:13]) # get labels
+    test_labels = np.asarray(test_data.iloc[:,2:13]) # get labels
 
     # makes predictions on the dev set
     test_predictions = train_and_predict(train_word_indices, train_labels, test_word_indices, test_labels, NUM_WORDS, test_data, embedding_layer)
