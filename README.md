@@ -1,4 +1,9 @@
-<<<<<<< HEAD
+# multi_class_tweet_sentiment_analyzer
+An artificial neural network which reads in tweets categorized as any of several emotions and makes predictions on new tweets made as the final project for UA Neural Networks in Fall 2019
+
+Below is the original project description from the class
+========
+
 # Objectives
 
 The learning objectives of this assignment are to:
@@ -93,20 +98,3 @@ site to expect predictions on the test set, rather than predictions on the
 development set.
 You should run your model on the test data, and upload your model predictions to
 the CodaLab site.
- 
-# Grading
-
-You will be graded first by your model's accuracy, and second on how well your
-model ranks in the competition.
-If your model achieves at least 0.440 accuracy on the test set, you will get
-at least a B.
-If your model achieves at least 0.500 accuracy on the test set, you will get
-an A.
-All models within the same letter grade will be distributed evenly across the
-range, based on their rank.
-So for example, the highest ranked model in the A range will get 100%, and the
-lowest ranked model in the B range will get 80%.
-=======
-# multi_class_tweet_sentiment_analyzer
-An artificial neural network which reads in tweets categorized as any of several emotions and makes predictions on new tweets
->>>>>>> 5e0404b1f7b4f345e1a1047c905264d7619d0ad4
