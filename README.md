@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Objectives
 
 The learning objectives of this assignment are to:
@@ -105,3 +106,7 @@ All models within the same letter grade will be distributed evenly across the
 range, based on their rank.
 So for example, the highest ranked model in the A range will get 100%, and the
 lowest ranked model in the B range will get 80%.
+=======
+# multi_class_tweet_sentiment_analyzer
+An artificial neural network which reads in tweets categorized as any of several emotions and makes predictions on new tweets
+>>>>>>> 5e0404b1f7b4f345e1a1047c905264d7619d0ad4
