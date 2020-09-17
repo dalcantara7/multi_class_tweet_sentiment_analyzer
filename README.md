@@ -7,7 +7,7 @@ Creat an artificial neural network which reads in tweets categorized as any of s
 The creation of the project got me familiar with the process of building Neural Networks with the Keras API. For this application I used a __Recurrent Neural Network with GRU units__ as they are quire powerful in Natural Language Processing tasks. The metric we optimized for was Jaccard Similarity. I acheived a __0.52 (52%) Jaccard Similarity__ score, placing me among the top 20% performers in this class. 
 
 The Jaccard Index is given as the intersection of two sets / the union of two sets as follows:
-![jaccard index](https://www.google.com/url?sa=i&url=https%3A%2F%2Fneo4j.com%2Fdocs%2Fgraph-algorithms%2Fcurrent%2Flabs-algorithms%2Fjaccard%2F&psig=AOvVaw23ywK9UnH7znQrxR51hn6t&ust=1600470056394000&source=images&cd=vfe&ved=0CAIQjRxqFwoTCKCpi96l8esCFQAAAAAdAAAAABAJ)
+![jaccard index](https://neo4j.com/docs/graph-algorithms/current/images/jaccard.png)
 
 Below is the original project description from the class
 ========
