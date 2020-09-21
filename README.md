@@ -4,6 +4,9 @@
 Creat an artificial neural network which reads in tweets categorized as any of several emotions and makes predictions on new tweets. Produces as the final project for UA Neural Networks in Fall 2019.
 
 ## Methods
+
+### Model Architecture  
+![model architecture](https://github.com/dalcantara7/multi_class_tweet_sentiment_analyzer/blob/master/model%20architecture.png)  
 The creation of the project got me familiar with the process of building Neural Networks with the Keras API. For this application I used a __Recurrent Neural Network with GRU units__ as they are quire powerful in Natural Language Processing tasks. The metric we optimized for was Jaccard Similarity. I acheived a __0.52 (52%) Jaccard Similarity__ score, placing me among the top 20% performers in this class. 
 
 The Jaccard Index is given as the intersection of two sets / the union of two sets as follows:
